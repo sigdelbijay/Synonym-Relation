@@ -24,16 +24,16 @@
         };
 
         async function getSynonym(item) {
-            let y = {};
-            y['word'] = item;
-            let tempArray = [];
-
+            let tempArray;
             const conceptNetData =  await conceptnet.init(item);
             const wordNetData =  await wordnet.init(item);
             const synonymsLibData = await synonymsLib.init(item);
             tempArray = [...conceptNetData, ...wordNetData, ...synonymsLibData];
-            y['synonyms'] = [tempArray[0]];
+            if(!(tempArray && tempArray.length)) return;
 
+            let y = {};
+            y['word'] = item;
+            y['synonyms'] = [tempArray[0]];
 
             // removing duplicate synonyms
             for(let i=1; i<tempArray.length; i++) {
@@ -61,7 +61,7 @@
         function main() {
             let x = {};
             let question, newQuestion;
-            question = "What is the only divisor besides 1 that a prime number can have?";
+            question = "How many primes were included in the early Greek's list of prime numbers?";
             console.log("Question is: ", question);
             wordpos.getNouns(question)
                     .then(async(result) => {
@@ -72,16 +72,17 @@
                             res = await app.locals.db.collection('Synonym')
                                 .find({word: item}).toArray();
                             res = res[0];
-
-                            if(!res.length) {
+                            if(!res) {
+                                // console.log("1")
                                 res = await getSynonym(item);
+                                if(!res) continue;
                                 app.locals.db.collection('Synonym', function (err, collection) {
 
                                     collection.insert(res);
 
                                 });
                             }
-                            
+
                             let returnData = res.synonyms.find((element) => element.source.includes('SynonymsLib'))
                             if(returnData) x[item] = returnData.synWord; 
 
